@@ -1,51 +1,102 @@
-/*
-  WiFi Status
+/*************************************************************
 
- This sketch runs a script called "pretty-wifi-info.lua"
- installed on your Yún in folder /usr/bin.
- It prints information about the status of your wifi connection.
+  This is a simple demo of sending and receiving some data.
+  Be sure to check out other examples!
+ *************************************************************/
 
- It uses Serial to print, so you need to connect your YunShield/Yún to your
- computer using a USB cable and select the appropriate port from
- the Port menu
+/* Fill-in information from Blynk Device Info here */
+#define BLYNK_TEMPLATE_ID           "TMPL4jJPcN2A3"
+#define BLYNK_TEMPLATE_NAME         "Quickstart Template"
+#define BLYNK_AUTH_TOKEN            "oBkvUetJer0vhaaEBdDUjNzQzB32Fe3C"
 
- created  18 June 2013
- By Federico Fissore
+/* Comment this out to disable prints and save space */
+#define BLYNK_PRINT Serial
 
- This example code is in the public domain.
 
- http://www.arduino.cc/en/Tutorial/YunWiFiStatus
+#include <Bridge.h>
+#include <BlynkSimpleYun.h>
+#include <Stepper.h>
 
- */
+// change this to the number of steps on your motor
+#define STEPS 100
 
-#include <Process.h>
+// create an instance of the stepper class, specifying
+// the number of steps of the motor and the pins it's
+// attached to
+Stepper stepper(STEPS, 8, 9, 10, 11);
 
-void setup() {
-  SerialUSB.begin(9600);  // initialize serial communication
-  while (!SerialUSB);     // do nothing until the serial monitor is opened
+// the previous reading from the analog input
+int amountSteps = 0;
 
-  SerialUSB.println("Starting bridge...\n");
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
-  Bridge.begin();  // make contact with the linux processor
-  digitalWrite(13, HIGH);  // Led on pin 13 turns on when the bridge is ready
+BlynkTimer timer;
 
-  delay(2000);  // wait 2 seconds
+// This function is called every time the Virtual Pin 0 state changes
+BLYNK_WRITE(V0)
+{
+  // Set incoming value from pin V0 to a variable
+  int value = param.asInt();
+  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+  changeSteps(10);
+
+  if (pinValue == 1){
+    for (int i = 0; i <= 255; i++) {
+      stepper.step(10);
+    }
+    Blynk.virtualWrite(V1, pinValue);
+  }
+  
+  // Update state
+  //Blynk.virtualWrite(V1, value);
+
 }
 
-void loop() {
-  Process wifiCheck;  // initialize a new process
+// This function is called every time the device is connected to the Blynk.Cloud
+BLYNK_CONNECTED()
+{
+  // Change Web Link Button message to "Congratulations!"
+  Blynk.setProperty(V3, "offImageUrl", "https://static-image.nyc3.cdn.digitaloceanspaces.com/general/fte/congratulations.png");
+  Blynk.setProperty(V3, "onImageUrl",  "https://static-image.nyc3.cdn.digitaloceanspaces.com/general/fte/congratulations_pressed.png");
+  Blynk.setProperty(V3, "url", "https://docs.blynk.io/en/getting-started/what-do-i-need-to-blynk/how-quickstart-device-was-made");
+}
 
-  wifiCheck.runShellCommand("/usr/bin/pretty-wifi-info.lua");  // command you want to run
+// This function sends Arduino's uptime every second to Virtual Pin 2.
+void myTimerEvent()
+{
+  // You can send any value at any time.
+  // Please don't send more that 10 values per second.
+  Blynk.virtualWrite(V2, millis() / 1000);
+}
 
-  // while there's any characters coming back from the
-  // process, print them to the serial monitor:
-  while (wifiCheck.available() > 0) {
-    char c = wifiCheck.read();
-    SerialUSB.print(c);
-  }
+void changeSteps(int steps){
+  amountSteps = steps;
+  for (int i = 0; i <= 255; i++) {
+      stepper.step(10);
+    }
+}
 
-  SerialUSB.println();
+void setup()
+{
+  // Debug console
+    // set the speed at 60 rpm:
+  stepper.setSpeed(60);
+  // initialize the serial port:
+  Serial.begin(115200);
 
-  delay(5000);
+  Blynk.begin(BLYNK_AUTH_TOKEN);
+  // You can also specify server:
+  //Blynk.begin(BLYNK_AUTH_TOKEN, "blynk.cloud", 80);
+  //Blynk.begin(BLYNK_AUTH_TOKEN, IPAddress(192,168,1,100), 8080);
+
+  // Setup a function to be called every second
+  timer.setInterval(1000L, myTimerEvent);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+  stepper.step(amountSteps);
+  // You can inject your own code or combine it with other sketches.
+  // Check other examples on how to communicate with Blynk. Remember
+  // to avoid delay() function!
 }
