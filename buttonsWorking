@@ -1,0 +1,51 @@
+#include <Stepper.h>
+
+#define BUTTON_PIN 2       // Define the pin for the physical button
+#define TOUCH_SENSOR_PIN A0 // Define the pin for the Grove touch sensor
+#define LED_PIN 3          // Define the pin for the LED
+#define DEBOUNCE_DELAY 50  // Adjust debounce delay as needed
+
+#define STEPS 100 // Change this to the number of steps on your motor
+
+Stepper stepper(STEPS, 8, 9, 10, 11);
+int amountSteps = 10; // Initial amount of steps
+
+void setup() {
+  Serial.begin(115200);
+  stepper.setSpeed(60);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(TOUCH_SENSOR_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+}
+
+void loop() {
+  static unsigned long lastDebounceTime = 0;
+  unsigned long currentMillis = millis();
+
+  // Check physical button
+  int buttonState = digitalRead(BUTTON_PIN);
+
+  // Check touch sensor
+  int touchState = digitalRead(TOUCH_SENSOR_PIN);
+
+  // Check if either the physical button is pressed or the touch sensor is touched, and debounced
+  if ((buttonState == HIGH || touchState == HIGH) && (currentMillis - lastDebounceTime) > DEBOUNCE_DELAY) {
+    lastDebounceTime = currentMillis;
+
+    // Move the stepper motor while the button is held down
+    while ((buttonState == HIGH || touchState == HIGH)) {
+      digitalWrite(LED_PIN, HIGH); // Turn on the LED
+      stepper.step(10);
+      delay(1); // Adjust delay as needed
+
+      // Update states
+      buttonState = digitalRead(BUTTON_PIN);
+      touchState = digitalRead(TOUCH_SENSOR_PIN);
+    }
+
+    // Turn off the LED when the button is released
+    digitalWrite(LED_PIN, LOW);
+
+    Serial.println("Button released");
+  }
+}
